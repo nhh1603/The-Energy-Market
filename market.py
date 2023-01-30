@@ -51,31 +51,31 @@ if __name__ == "__main__":
  threads = []
 # connect with homes with sockets 
  print("Starting market.")
-with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    s.bind((HOST, PORT))
-    s.listen()
-    conn, addr = s.accept()
-    with conn:
-    	print(f"Connected by {addr}")
-while True:
-    data = conn.recv(1024)
-    if data == 1:
-        p = threading.Thread(target=sellEnergy, args= (data))
-        p.start()
-        threads.append(p)
-        nbSell=+1
-    if data == 2:
-        q = threading.Thread(target=buyEnergy, args= (data))
-        q.start()
-        threads.append(q)
-        nbBuy=+1
-    if data == 3:
-        print("Terminating market.")
-        for thread in threads:
-            thread.join()
-        conn.close()
-        break
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+    server_socket.bind((HOST, PORT))
+    server_socket.listen()
+    client_socket, addr = server_socket.accept()
+    with client_socket:
+        print(f"Connected by {addr}")
+        while True:
+            data = client_socket.recv(1024)
+            if data == 1:
+                p = threading.Thread(target=sellEnergy, args= (data))
+                p.start()
+                threads.append(p)
+                nbSell=+1
+            if data == 2:
+                q = threading.Thread(target=buyEnergy, args= (data))
+                q.start()
+                threads.append(q)
+                nbBuy=+1
+            if data == 3:
+                print("Terminating market.")
+                for thread in threads:
+                    thread.join()
+                client_socket.close()
+                break
     limTransaction()
     energyPrice = priceEnergy()
     print("Energy price %d" % energyPrice)
-    sleep(5)
+    time.sleep(5)
