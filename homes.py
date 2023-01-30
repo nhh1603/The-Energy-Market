@@ -88,6 +88,11 @@ def handle_last_receive(home):
             return home.id, int(value)
 
 
+def handle_client_server(home):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
+        client_socket.connect((HOST, PORT))
+        client_socket.sendall(str(home.exchange_market).encode())
+
 if __name__ == '__main__':
 
     # Input the number of homes
@@ -108,24 +113,28 @@ if __name__ == '__main__':
     mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
 
     # Send first messages to the Message Queue
-    with multiprocessing.Pool(processes = 4) as pool:
+    with multiprocessing.Pool(processes = 8) as pool:
         pool.map(handle_first_send, homes_list)
     mq.send("0".encode(), type = type_eof)
     print()
 
     # Receive first messages from the Message Queue
-    with multiprocessing.Pool(processes = 4) as pool:
+    with multiprocessing.Pool(processes = 8) as pool:
         for result in pool.map_async(handle_first_receive, homes_list).get():
             homes_list[result[0]-1].exchange_market = result[1]
     print()
 
     # Receive last messages from the Message Queue
-    with multiprocessing.Pool(processes = 4) as pool:
+    with multiprocessing.Pool(processes = 8) as pool:
         for result in pool.map_async(handle_last_receive, homes_list).get():
             homes_list[result[0]-1].exchange_market = result[1]
     print()
     mq.remove()
 
+    # Client server
+    with multiprocessing.Pool(processes = 8) as pool:
+        pool.map_async(handle_client_server, homes_list)
+        
     for home in homes_list:
         print(home.exchange_market)
 
