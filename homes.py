@@ -3,8 +3,10 @@ import sysv_ipc
 import socket
 import multiprocessing
 from home import Home
+from multiprocessing import Process
 
-energy_interval = [20, 40] # kWh
+
+energy_interval = [25, 35] # kWh
 homes_list = []
 
 day = 1
@@ -14,47 +16,103 @@ total_policy_2 = 0
 total_policy_3 = 0
 total_exchange_market = 0
 
-key = 123
-mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
+# key = 123
+# mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
 type_policy_1 = 1
 type_policy_2 = 2
 type_policy_3 = 3
 type_need = 4
+type_eof = 5
 
 HOST = "localhost"
 PORT = 1789
 
-def handle_request(home):
-    message = str(home.gap).encode()
-    if home.gap < 0:
-        mq.send(message, type = type_need)
-    else:
-        if home.trading_policy == 1:
-            mq.send(message, type = type_policy_1)
-        elif home.trading_policy == 2:
-            mq.send(message, type = type_policy_2)
-        elif home.trading_policy == 3:
-            mq.send(message, type = type_policy_3)
 
-def handle_message_queue(home):
-    gap = home.gap
-    print("Init: ", gap)
-    if gap > 0:
-        message = str(gap).encode()
+def init_homes_list(no_homes):
+
+    # Initialize homes list
+    for i in range(no_homes):
+        home = Home(i + 1, random.uniform(energy_interval[0], energy_interval[1]), random.uniform(energy_interval[0], energy_interval[1]), random.randint(1,3))
+        homes_list.append(home)
+
+    for home in homes_list:
+        print(home)
+
+
+def handle_first_send(home):
+    message = str(home.gap).encode()
+    if home.gap > 0:
         if home.trading_policy == 1:
             mq.send(message, type = type_policy_1)
         elif home.trading_policy == 3:
             mq.send(message, type = type_policy_3)
-    else:
-        message, type = mq.receive(type = -3)
+    
+
+
+def handle_first_receive(home):
+    while True:
+        gap = home.gap
+        message, type = mq.receive(type = -5)
         value = message.decode()
-        while gap + float(value) < 0:
-            gap += float(value)
-            message, type = mq.receive(type = -3)
+        if type == type_eof:
+            mq.send("0".encode(), type = type_eof)
+            print("exit")
+            return home.id, home.exchange_market
+            # break
+        if gap < 0:
+            while gap + float(value) < 0 and type != type_eof:
+                gap += float(value)
+                message, type = mq.receive(type = -5)
+                value = message.decode()
+            gap = gap + float(value)
+            # print("Send: ",gap, type)
+            if gap > 0:
+                mq.send(str(gap).encode(), type = type)
+                # home.exchange_market = 0
+                # home.set_exchange_market(0)
+                print(1, gap)
+                return home.id, 0
+                #break
+            else:
+                mq.send("0".encode(), type = type_eof)
+                # home.exchange_market = gap
+                home.set_exchange_market(gap)
+                print(2, home.exchange_market, gap)
+                return home.id, gap
+                # break
+        elif gap >= 0:
+            mq.send(message, type = type)
+            print(3)
+            return home.id, home.exchange_market
+            # break
+
+
+def handle_last_receive(home):
+    while True:
+        if home.trading_policy != 3:
+            print("exit")
+            return home.id, home.exchange_market
+        else:
+            message, type = mq.receive(type = -5)
+            if type == type_eof:
+                mq.send("0".encode(), type = type_eof)
+                print("exit")
+                return home.id, home.exchange_market
+                # break
+            while type != type_policy_3:
+                if type == type_policy_1:
+                    message, type = mq.receive(type = -5)
+                if type == type_eof:
+                    mq.send("0".encode(), type = type_eof)
+                    print("exit")
+                    return home.id, home.exchange_market
+            # if type == type_policy_3:
             value = message.decode()
-        gap += float(value)
-        print("Send: ",gap, type)
-        mq.send(str(gap).encode(), type = type)
+            # home.exchange_market = float(value)
+            # home.set_exchange_market(float(value))
+            print(value)
+            return home.id, float(value)
+            # break
 
 if __name__ == '__main__':
 
@@ -70,53 +128,35 @@ if __name__ == '__main__':
         else:
             print("Please enter an integer!")
 
-    # Initialize homes list
-    for i in range(no_homes):
-        home = Home(random.uniform(energy_interval[0], energy_interval[1]), random.uniform(energy_interval[0], energy_interval[1]), random.randint(1,3))
-        homes_list.append(home)
+    init_homes_list(no_homes)
 
-    for home in homes_list:
-        print(home)
+    key = 123
+    mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
 
-    # Send messages to the Message Queue
-    with multiprocessing.Pool(processes = no_homes) as pool:
-        pool.map_async(handle_message_queue, homes_list).get()
-    #     pool.map_async(handle_request, homes_list).get()
-    # mq.send("EOF".encode())
-    
-    # # Receive messages from the Message Queue
-    # while True:
-    #     message, t = mq.receive()
-    #     value = message.decode()
+    # Send first messages to the Message Queue
+    with multiprocessing.Pool(processes = 4) as pool:
+        pool.map(handle_first_send, homes_list)
+        # pool.map(handle_first_receive, homes_list)
+    mq.send("0".encode(), type = type_eof)
+    print()
 
-    #     if value == "EOF":
-    #         print("exit")
-    #         break
+    # Receive first messages from the Message Queue
+    # with multiprocessing.Pool(processes = 4) as pool:
+    #     pool.map_async(handle_first_receive, homes_list).get()
+    with multiprocessing.Pool(processes = 4) as pool:
+        for result in pool.map_async(handle_first_receive, homes_list).get():
+            homes_list[result[0]-1].exchange_market = result[1]
 
-    #     if t != type_policy_2:
-    #         total_exchange_homes += float(value)
-    #     if t == type_policy_2:
-    #         total_policy_2 += float(value)
-    #     if t == type_policy_3:
-    #         total_policy_3 += float(value)
+    print()
 
-    #     print(value, t)
-        
+    # Receive last messages from the Message Queue
+    with multiprocessing.Pool(processes = 4) as pool:
+        for result in pool.map_async(handle_last_receive, homes_list).get():
+            homes_list[result[0]-1].exchange_market = result[1]
+    print()
     mq.remove()
 
-    # Prepare message to send to the market
-    if total_exchange_homes >= total_policy_3:
-        total_exchange_market = total_policy_3 + total_policy_2
-    else:
-        total_exchange_market = total_exchange_homes + total_policy_2
+    for home in homes_list:
+        print(home.exchange_market)
 
-    # Homes client socket
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-        client_socket.connect((HOST, PORT))
-        client_socket.sendall(str(total_exchange_market).encode())
-    # print("Total exchange homes: ", total_exchange_homes)
-    # print("Total policy 2: ", total_policy_2)
-    # print("Total policy 3: ", total_policy_3)
-    # print("Total exchange market: ", total_exchange_market)
 
-    
