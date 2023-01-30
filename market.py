@@ -51,11 +51,13 @@ def coeffTransaction():
 
 def multi_threaded_client(connection):
     while True:
-        data = int(connection.recv(1024))
+        data = connection.recv(1024).decode()
         if not data:
             print("Bye")
             lock.release()
-            break
+            # break
+        data = int(data)
+        print(data)
         handle_energy(data)
         energyTransaction = energyTransaction + data
         coeffTransaction()

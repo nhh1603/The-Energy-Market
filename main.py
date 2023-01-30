@@ -12,19 +12,19 @@ def handle_receive(mq):
     print(value)
 
 if __name__ == "__main__":
-    # with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-    #     s.bind((HOST, PORT))
-    #     s.listen()
-    #     conn, addr = s.accept()
-    #     with conn:
-    #         print(f"Connected by {addr}")
-    #         data = conn.recv(1024)
-    #         print(data)
-    #         print("Disconnecting from client: ", addr)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+        conn, addr = s.accept()
+        with conn:
+            print(f"Connected by {addr}")
+            data = conn.recv(1024).decode()
+            print(data)
+            print("Disconnecting from client: ", addr)
 
-    key = 123
-    mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
-    mq.remove()
+    # key = 123
+    # mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
+    # mq.remove()
 
     # message = str(1).encode()
     # mq.send(message, type = 3)

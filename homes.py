@@ -47,16 +47,13 @@ def handle_first_receive(home):
         value = message.decode()
         if type == type_eof:
             mq.send("0".encode(), type = type_eof)
-            print("exit")
             return home.id, home.exchange_market
-            # break
         if gap < 0:
             while gap + int(value) < 0 and type != type_eof:
                 gap += int(value)
                 message, type = mq.receive(type = -5)
                 value = message.decode()
             gap = gap + int(value)
-            # print("Send: ",gap, type)
             if gap > 0:
                 mq.send(str(gap).encode(), type = type)
                 return home.id, 0
@@ -77,7 +74,6 @@ def handle_last_receive(home):
             if type == type_eof:
                 mq.send("0".encode(), type = type_eof)
                 return home.id, home.exchange_market
-                # break
             while type != type_policy_3:
                 if type == type_policy_1:
                     message, type = mq.receive(type = -5)
@@ -134,6 +130,8 @@ if __name__ == '__main__':
     # Client server
     with multiprocessing.Pool(processes = 8) as pool:
         pool.map_async(handle_client_server, homes_list)
+
+    # handle_client_server(homes_list[0])
         
     for home in homes_list:
         print(home.exchange_market)
