@@ -10,7 +10,7 @@ from _thread import *
 
 HOST = "localhost"
 PORT = 1789
-
+lock = threading.Lock()
 #functions
 
 def priceEnergy():
@@ -51,8 +51,10 @@ def coeffTransaction():
 
 def multi_threaded_client(connection):
     while True:
-        data = int(client_socket.recv(1024))
+        data = int(connection.recv(1024))
         if not data:
+            print("Bye")
+            lock.release()
             break
         handle_energy(data)
         energyTransaction = energyTransaction + data
@@ -62,21 +64,20 @@ def multi_threaded_client(connection):
         print("Energy price %d" % energyPrice)
         value=input("Press y to send energy price to home(s) qnd continue this simulation\n")
         if value == 'y':    
-             client_socket.sendall(energyPrice)
+            connection.sendall(energyPrice)
         else:
             print("Thanks for using this simulation")
-    client_socket.close()
+    connection.close()
 
 if __name__ == "__main__":
-    threads = []
-    #semaphore = Semaphore(5)
     #connect with homes with sockets 
     print("Starting market.")
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind((HOST, PORT))
+    server_socket.listen()
     while True:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
-            server_socket.bind((HOST, PORT))
-            server_socket.listen()
-            client_socket, addr = server_socket.accept()
-            print('Connected to: ' + addr[0] + ':' + str(addr[1]))
-            start_new_thread(multi_threaded_client, (Client, ))
+        client_socket, addr = server_socket.accept()
+        lock.acquire()
+        print('Connected to: ' + addr[0] + ':' + str(addr[1]))
+        start_new_thread(multi_threaded_client, (client_socket, ))
         server_socket.close()
