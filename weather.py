@@ -1,45 +1,37 @@
-
-import os
-import sys
 import time
-import threading
-from multiprocessing import Process, Value, Lock
+from multiprocessing import Pipe
 import random
-import multiprocessing
-import time
 
-def weather(temperature):
-    temperature.value=23
-    min = -20
-    max = 40
+
+normal_temp = 23
+loop_weather = 1
+temp_interval = [-20, 40]
+temp_interval_normal = [13, 27]
+temp_interval
+
+
+def update_weather(child_conn, temperature):
     while True:
-        print(temperature.value)
-        a=random.random()
-        if a > 0.5:
-            temperature.value=temperature.value+1
+        if temperature >= normal_temp:
+            if temperature <= temp_interval_normal[1]:
+                change = random.randint(-5, 5)
+            else:
+                change = random.randint(-5, 3)
         else:
-            temperature.value=temperature.value-1
-        
-        if temperature.value > 27:
-            print("It's getting hot! Price inscreasing...")
-            return a
-        elif temperature.value < 13:
-            print("It's getting cold! Price increasing...")
-            return -a
-        else:
-            print("Normal temperature! Nothing happens")
+            if temperature >= temp_interval_normal[0]:
+                change = random.randint(-6, 6)
+            else:
+                change = random.randint(-6, 8)
+        temperature += change
 
-        if temperature.value == min:
-            temperature.value=temperature.value+5
-        elif temperature.value == max:
-            temperature.value=temperature.value-5
+        if temperature <= temp_interval[0]:
+            temperature = temperature + 8
+        elif temperature >= temp_interval[1]:
+            temperature = temperature - 6
+        # print(temperature)
+        message = child_conn.recv()
+        if message.lower() == "get":
+            child_conn.send(temperature)
+
         time.sleep(1)
 
-if __name__=="__main__":
-    temp = multiprocessing.Value('i', 23)
-
-    w = Process(target=weather, args=(temp,))
-    w.start()
-    w.join()
-
-    print(temp.value)
