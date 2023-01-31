@@ -87,7 +87,7 @@ def handle_last_receive(home):
 def handle_client_server(home):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
         client_socket.connect((HOST, PORT))
-        client_socket.sendall(str(home.exchange_market).encode())
+        client_socket.send(str(home.exchange_market).encode())
 
 if __name__ == '__main__':
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     # Client server
     with multiprocessing.Pool(processes = 8) as pool:
-        pool.map_async(handle_client_server, homes_list)
+        pool.map(handle_client_server, homes_list)
 
     # handle_client_server(homes_list[0])
         
