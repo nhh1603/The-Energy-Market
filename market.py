@@ -4,17 +4,51 @@ import time
 import sys
 import sysv_ipc
 import decimal
-import threading
+from threading import Thread
 import socket
 from _thread import *
+from socketserver import ThreadingMixIn 
 
 HOST = "localhost"
 PORT = 1789
-lock = threading.Lock()
 storage = 1000000
 energyTransaction = 0
 energyPrice = 0.145 #e/KWh
+loop0 = True
+loop1 =False
+
+# Multithreaded Python server : TCP Server Socket Thread Pool
+class ClientThread(Thread):
+    def __init__(self,ip,port): 
+        Thread.__init__(self) 
+        self.ip = ip 
+        self.port = port
+        print("[+] New server socket thread started for " + ip + ":" + str(port))
+    def run(self):
+        global loop0
+        global energyTransaction
+        global energyPrice
+        while True : 
+            data = conn.recv(1024).decode('utf8')
+            print(data)
+            if not data:
+                #print("Bye")
+                break
+            if data == 'end':
+                print("End of transactions")
+                loop0 = False
+                break
+            else:
+                data = int(data)
+                handle_energy(data)
+                energyTransaction = energyTransaction + data
+                coeffTransaction()
+                energyPrice = priceEnergy()
+                energyTransaction = 0
+                print("Energy price %f\n" % energyPrice) 
+
 #functions
+
 
 def priceEnergy():
     global energyPrice
@@ -51,43 +85,32 @@ def coeffTransaction():
 
 #def weather(): shared memory
 
-def multi_threaded_client(connection):
-    global energyTransaction
-    global energyPrice
-    while True:
-        data = connection.recv(1024).decode()
-        if not data:
-            #print("Bye")
-            lock.release()
-            break
-        data = int(data)
-        print(data)
-        handle_energy(data)
-        energyTransaction = energyTransaction + data
-        coeffTransaction()
-        energyPrice = priceEnergy()
-        energyTransaction = 0
-        print("Energy price %f\n" % energyPrice)
     
 if __name__ == "__main__":
+    threads = []
+
     #connect with homes with sockets 
     print("Starting market.")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        server_socket.bind((HOST, PORT))
-    except socket.error as e:
-        print(str(e))
-    print('Socket is listening..')
-    server_socket.listen(5)
-    while True:
-        client_socket, addr = server_socket.accept()
-        lock.acquire()
-        print('Connected to: ' + addr[0] + ':' + str(addr[1]))
-        start_new_thread(multi_threaded_client, (client_socket, ))
-        #value=input("Press y to send energy price to home(s) and continue this simulation\n")
-        #if value == 'y':    
-        #    client_socket.sendall(energyPrice)
-        #else:
-        #    print("Thanks for using this simulation")
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    server_socket.bind((HOST, PORT))
+
+    while loop0:
+        server_socket.listen(5)
+        (conn, (ip,port)) = server_socket.accept()
+        newthread = ClientThread(ip,port)
+        newthread.start()
+        threads.append(newthread)
+        for t in threads:
+            t.join()
+        loop1 = True
     
-    server_socket.close()
+    while loop1:
+        print(energyPrice)
+        value=input("Press y to send energy price to home(s) and continue this simulation\n")
+        if value == 'y':
+            print("Sending...")    
+            conn.sendall(str(energyPrice).encode())
+        else:
+            print("Thanks for using this simulation")
+    

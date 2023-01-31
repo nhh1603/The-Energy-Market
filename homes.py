@@ -4,6 +4,8 @@ import socket
 import multiprocessing
 from home import Home
 from multiprocessing import Process
+from multiprocessing import Pool
+
 
 
 energy_interval = [25000, 35000] # Wh
@@ -17,6 +19,8 @@ type_eof = 5
 
 HOST = "localhost"
 PORT = 1789
+
+loop = True
 
 
 # Initialize homes list when start the program
@@ -85,9 +89,9 @@ def handle_last_receive(home):
 
 
 def handle_client_server(home):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client_socket:
-        client_socket.connect((HOST, PORT))
-        client_socket.send(str(home.exchange_market).encode())
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client_socket.connect((HOST, PORT))
+    client_socket.send(str(home.exchange_market).encode('utf8'))
 
 if __name__ == '__main__':
 
@@ -128,12 +132,21 @@ if __name__ == '__main__':
     mq.remove()
 
     # Client server
-    with multiprocessing.Pool(processes = 8) as pool:
-        pool.map(handle_client_server, homes_list)
-
-    # handle_client_server(homes_list[0])
-        
     for home in homes_list:
         print(home.exchange_market)
+    
+    with multiprocessing.Pool(processes = 8) as pool:
+        clients=pool.map_async(handle_client_server, homes_list)
+        clients.wait() #if map_async but not recommended
+
+    while loop:    
+        update = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        update.connect((HOST, PORT))
+        update.send("end".encode())
+        print("Energy price")
+        data=update.recv(1024).decode()
+        print(data)
+
+    # handle_client_server(homes_list[0])
 
 
