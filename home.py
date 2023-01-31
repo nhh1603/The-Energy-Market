@@ -11,10 +11,15 @@ class Home:
         if self.trading_policy == 2:
             self.exchange_market = self.gap
 
-    def update_rates(self, new_production_rate, new_consumption_rate):
-        self.production_rate = int(new_production_rate)
-        self.consumption_rate = int(new_consumption_rate)
-        self.gap = int(new_production_rate - new_consumption_rate)
+    def update_home(self, new_production_rate_percentage, new_consumption_rate_percentage):
+        self.production_rate = int(self.production_rate * (1 + new_production_rate_percentage))
+        self.consumption_rate = int(new_consumption_rate * (1 + new_consumption_rate_percentage))
+        self.gap = int(self.production_rate - self.consumption_rate)
+        self.exchange_market = 0
+        if self.gap < 0:
+            self.exchange_market = self.gap
+        if self.trading_policy == 2:
+            self.exchange_market = self.gap
 
     def __str__(self):
         return (f"Home {self.id}: \nProduction Rate: {self.production_rate} \nConsumption Rate: {self.consumption_rate} \nGap: {self.gap} \nTrading Policy: {self.trading_policy} \n")
