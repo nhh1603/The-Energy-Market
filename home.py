@@ -13,7 +13,7 @@ class Home:
 
     def update_home(self, new_production_rate_percentage, new_consumption_rate_percentage):
         self.production_rate = int(self.production_rate * (1 + new_production_rate_percentage))
-        self.consumption_rate = int(new_consumption_rate * (1 + new_consumption_rate_percentage))
+        self.consumption_rate = int(self.consumption_rate * (1 + new_consumption_rate_percentage))
         self.gap = int(self.production_rate - self.consumption_rate)
         self.exchange_market = 0
         if self.gap < 0:

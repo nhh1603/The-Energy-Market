@@ -6,7 +6,8 @@ from home import Home
 from multiprocessing import Process
 from multiprocessing import Pool
 
-
+key = 123
+mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
 
 energy_interval = [25000, 35000] # Wh
 homes_list = []
@@ -106,46 +107,61 @@ if __name__ == '__main__':
                 print("Please enter a positive integer!")
         else:
             print("Please enter an integer!")
+    print("Starting homes...\n")
 
     init_homes_list(no_homes)
 
-    key = 123
-    mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
-
-    # Send first messages to the Message Queue
-    with multiprocessing.Pool(processes = 8) as pool:
-        pool.map(handle_first_send, homes_list)
     mq.send("0".encode(), type = type_eof)
-    print()
 
-    # Receive first messages from the Message Queue
-    with multiprocessing.Pool(processes = 8) as pool:
-        for result in pool.map_async(handle_first_receive, homes_list).get():
-            homes_list[result[0]-1].exchange_market = result[1]
-    print()
+    while True:
+        # Send first messages to the Message Queue
+        with multiprocessing.Pool(processes = 8) as pool:
+            pool.map(handle_first_send, homes_list)
+        print()
 
-    # Receive last messages from the Message Queue
-    with multiprocessing.Pool(processes = 8) as pool:
-        for result in pool.map_async(handle_last_receive, homes_list).get():
-            homes_list[result[0]-1].exchange_market = result[1]
-    print()
-    mq.remove()
+        # Receive first messages from the Message Queue
+        with multiprocessing.Pool(processes = 8) as pool:
+            for result in pool.map_async(handle_first_receive, homes_list).get():
+                homes_list[result[0]-1].exchange_market = result[1]
 
-    # Client server
-    for home in homes_list:
-        print(home.exchange_market)
-    
-    with multiprocessing.Pool(processes = 8) as pool:
-        clients=pool.map_async(handle_client_server, homes_list)
-        clients.wait() #if map_async but not recommended
+        # Receive last messages from the Message Queue
+        with multiprocessing.Pool(processes = 8) as pool:
+            for result in pool.map_async(handle_last_receive, homes_list).get():
+                homes_list[result[0]-1].exchange_market = result[1]
 
-    while loop:    
-        update = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        update.connect((HOST, PORT))
-        update.send("end".encode())
-        print("Energy price")
-        data=update.recv(1024).decode()
-        print(data)
+        # Client server
+
+        print("Energy remaining after transactions between homes\n")
+
+        for home in homes_list:
+            print(home.exchange_market)
+
+        print()
+
+        with multiprocessing.Pool(processes = 8) as pool:
+            clients=pool.map_async(handle_client_server, homes_list)
+            clients.wait()
+
+        loop=True
+        
+        while loop:
+            update = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            update.connect((HOST, PORT))
+            update.send("end".encode())
+            data1=update.recv(1024).decode()
+            if not data1:
+                break
+            data1=float(data1)
+            for h in homes_list:
+                h.update_home(data1, -data1)
+            day=day+1
+            print("Starting new day...\n")
+            print("Day %d\n" % day)
+            update.sendall(str(day).encode())
+            for h in homes_list:
+                print(h)
+            loop = False
+            break
 
     # handle_client_server(homes_list[0])
 
