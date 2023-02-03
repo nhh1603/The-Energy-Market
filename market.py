@@ -19,7 +19,7 @@ import signal
 
 
 HOST = "localhost"
-PORT = 1792
+PORT = 1794
 storage = 1000000
 energyTransaction = 0
 energyPrice = 0.145 #e/KWh
@@ -168,7 +168,7 @@ if __name__ == "__main__":
                     print("Energy price at the end of the day %f\n" % energyPrice)
 
                     #update production ratio to homes
-                    value=input("Press 'y' to send new production/consumption ratio to home(s) and skip to next day: ")
+                    value=input("Tap 'y' to send new production/consumption ratio to home(s) and continue to next day or tap anything else to terminate this simulation: ")
                     print()
                     if value == 'y':
                         conn.sendall(str(handle_temp(temperature)).encode())#sending production ratio instead of price

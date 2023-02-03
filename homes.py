@@ -20,7 +20,7 @@ type_policy_3 = 3
 type_eof = 5
 
 HOST = "localhost"
-PORT = 1792
+PORT = 1794
 
 loop = True
 
@@ -153,7 +153,7 @@ if __name__ == '__main__':
             if not data1:
                 break
             if data1 == "end":
-                print("Thank for using this simulation!")
+                print("Thanks for using this simulation!")
                 update.close()
                 os._exit(os.EX_OK)
             else :
