@@ -19,7 +19,7 @@ type_policy_3 = 3
 type_eof = 5
 
 HOST = "localhost"
-PORT = 1789
+PORT = 1792
 
 loop = True
 
@@ -131,10 +131,10 @@ if __name__ == '__main__':
 
         # Client server
 
-        print("Energy remaining after transactions between homes\n")
+        print("Energy remaining after exchanges between homes, which will be used to exchange with market\n")
 
         for home in homes_list:
-            print(home.exchange_market)
+            print(f"Home {home.id}: {home.exchange_market} Wh")
 
         print()
 

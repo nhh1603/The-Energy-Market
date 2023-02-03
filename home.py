@@ -22,4 +22,4 @@ class Home:
             self.exchange_market = self.gap
 
     def __str__(self):
-        return (f"Home {self.id}: \nProduction Rate: {self.production_rate} \nConsumption Rate: {self.consumption_rate} \nGap: {self.gap} \nTrading Policy: {self.trading_policy} \n")
+        return (f"Home {self.id}: \nProduction Rate: {self.production_rate} Wh\nConsumption Rate: {self.consumption_rate} Wh\nGap: {self.gap} Wh\nTrading Policy: {self.trading_policy} \n")

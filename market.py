@@ -19,7 +19,7 @@ import signal
 
 
 HOST = "localhost"
-PORT = 1789
+PORT = 1792
 storage = 1000000
 energyTransaction = 0
 energyPrice = 0.145 #e/KWh
@@ -71,7 +71,7 @@ def handle_energy(energy):
         print("Buying %d\n" % energy)
         storage=storage+energy
     elif energy == 0:
-        print("Nothing happened\n")
+        print("No exchange\n")
 
 def handle_temp(temp):
     coeff1=temp-23
@@ -125,7 +125,7 @@ if __name__ == "__main__":
             server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server_socket.bind((HOST, PORT))
             server_socket.listen(10)
-            print("Waiting for connections from homes.\n")
+            print("Waiting for connections from homes...\n")
             while True:
                 while loop0:
                     #print("loop 0")
@@ -142,14 +142,18 @@ if __name__ == "__main__":
                     parent_conn, child_conn = Pipe()
                     p = Process(target = update_weather, args = (child_conn, temperature))
                     p.start()
-                    phrase = input("Tap 'get' to have new updates about temperature\n")
+                    phrase = input("Tap 'get' to have new updates about temperature: ")
+                    while phrase.lower() != "get":
+                        phrase = input("Please enter 'get' only at this stage! Tap 'get' again: ")
                     #parent_conn.send("Get")
                     while phrase.lower() != "end":
                         parent_conn.send(phrase)
                         temperature = parent_conn.recv()
                         print("Temperature for the moment is: %d\n" % temperature)
                         handle_temp(temperature)
-                        phrase = input("Tap 'get' again to get another update of temperature or 'end' to go for next step\n")
+                        phrase = input("Tap 'get' again to get another update of temperature or 'end' to go for next step: ")
+                        while not (phrase.lower() == "get" or phrase.lower() == "end"):
+                            phrase = input("Please enter 'get' or 'end' only at this stage! Tap 'get' or 'end' again: ")
                         
                     #process external
                     print("Here is some news:\n")
@@ -164,7 +168,7 @@ if __name__ == "__main__":
                     print("Energy price at the end of the day %f\n" % energyPrice)
 
                     #update production ratio to homes
-                    value=input("Press y to send new production/consumption ratio to home(s) and skip to next day\n")
+                    value=input("Press 'y' to send new production/consumption ratio to home(s) and skip to next day: ")
                     print()
                     if value == 'y':
                         conn.sendall(str(handle_temp(temperature)).encode())#sending production ratio instead of price
@@ -185,6 +189,7 @@ if __name__ == "__main__":
                         p.join()
                         loop0=False
                         loop1=False
+                        # conn.sendall(value.encode())
                         conn.close()
                         server_socket.close()
                         os._exit(os.EX_OK)
