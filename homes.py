@@ -5,6 +5,7 @@ import multiprocessing
 from home import Home
 from multiprocessing import Process
 from multiprocessing import Pool
+import os
 
 key = 123
 mq = sysv_ipc.MessageQueue(key, sysv_ipc.IPC_CREAT)
@@ -151,16 +152,21 @@ if __name__ == '__main__':
             data1=update.recv(1024).decode()
             if not data1:
                 break
-            data1=float(data1)
-            for h in homes_list:
-                h.update_home(data1, -data1)
-            day=day+1
-            print("Starting new day...\n")
-            print("Day %d\n" % day)
-            update.sendall(str(day).encode())
-            for h in homes_list:
-                print(h)
-            loop = False
-            break
+            if data1 == "end":
+                print("Thank for using this simulation!")
+                update.close()
+                os._exit(os.EX_OK)
+            else :
+                data1=float(data1)
+                for h in homes_list:
+                    h.update_home(data1, -data1)
+                day=day+1
+                print("Starting new day...\n")
+                print("Day %d\n" % day)
+                update.sendall(str(day).encode())
+                for h in homes_list:
+                    print(h)
+                loop = False
+                break
 
 

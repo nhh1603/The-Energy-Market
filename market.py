@@ -182,6 +182,7 @@ if __name__ == "__main__":
                         loop1=False
                         break
                     else:
+                        conn.sendall("end".encode())
                         print("Thanks for using this simulation")
                         parent_conn.close()
                         child_conn.close()
