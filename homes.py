@@ -163,6 +163,4 @@ if __name__ == '__main__':
             loop = False
             break
 
-    # handle_client_server(homes_list[0])
-
 

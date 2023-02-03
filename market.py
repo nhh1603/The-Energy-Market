@@ -150,12 +150,13 @@ if __name__ == "__main__":
                         print("Temperature for the moment is: %d\n" % temperature)
                         handle_temp(temperature)
                         phrase = input("Tap 'get' again to get another update of temperature or 'end' to go for next step\n")
-                    
+                        
                     #process external
                     print("Here is some news:\n")
                     signal.signal(signal.SIGUSR1, handler)
                     ex=Process(target=handle_external)
                     ex.start()
+                    ex.terminate()
                     ex.join()
 
                     #update price energy
@@ -182,4 +183,8 @@ if __name__ == "__main__":
                         child_conn.close()
                         p.terminate()
                         p.join()
-                        break    
+                        loop0=False
+                        loop1=False
+                        conn.close()
+                        server_socket.close()
+                        os._exit(os.EX_OK)
